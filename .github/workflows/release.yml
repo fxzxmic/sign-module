@@ -1,0 +1,31 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published, released]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        dnf install -y gcc make openssl-devel xz-devel
+
+    - name: Build binary
+      run: |
+        make clean
+        make
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: sign-module
