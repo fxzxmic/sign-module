@@ -303,7 +303,7 @@ static unsigned char *create_signed_module(const unsigned char *module, size_t m
     // Modern OpenSSL 3.x CMS creation with compound literal
     CMS_ContentInfo *cms = CMS_sign(NULL, NULL, NULL, NULL,
                                    CMS_NOCERTS | CMS_PARTIAL | CMS_BINARY | CMS_DETACHED);
-    if (!cms || !CMS_add1_signer(cms, cert, key, md, CMS_NOCERTS | CMS_BINARY | CMS_NOSMIMECAP)) {
+    if (!cms || !CMS_add1_signer(cms, cert, key, md, CMS_NOCERTS | CMS_BINARY | CMS_NOSMIMECAP | CMS_NOATTR)) {
         CMS_ContentInfo_free(cms);
         fatal("CMS_sign/add1_signer failed\n");
     }
