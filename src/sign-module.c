@@ -36,7 +36,7 @@
 
 #include <lzma.h>
 
-#include "linux/module_signature.h"
+#include <linux/module_signature.h>
 
 #define PKEY_ID_PKCS7 2
 
@@ -135,12 +135,18 @@ static size_t get_unsigned_size(const unsigned char *buf, size_t buf_sz)
     return buf_sz;
 }
 
-/* Decompress XZ with conservative memory allocation */
+/* Decompress XZ with multithreading optimized for speed */
 static unsigned char *xz_decompress(const unsigned char *in, size_t in_sz, size_t *out_sz)
 {
     lzma_stream strm = LZMA_STREAM_INIT;
-    if (lzma_stream_decoder(&strm, UINT64_MAX, LZMA_CONCATENATED) != LZMA_OK) {
-        fatal("lzma_stream_decoder failed\n");
+
+    // Always use multithreaded decoder for maximum speed
+    if (lzma_stream_decoder_mt(&strm, &(lzma_mt){
+        .threads = sysconf(_SC_NPROCESSORS_ONLN) > 0 ? (uint32_t)sysconf(_SC_NPROCESSORS_ONLN) : 1,
+        .memlimit_threading = UINT64_MAX,  // No memory limit for threading
+        .memlimit_stop = UINT64_MAX        // No memory limit for stopping
+    }) != LZMA_OK) {
+        fatal("lzma_stream_decoder_mt failed\n");
     }
 
     // Conservative initial allocation - grow as needed
@@ -185,18 +191,10 @@ static unsigned char *xz_compress(const unsigned char *in, size_t in_sz, size_t 
 {
     lzma_stream strm = LZMA_STREAM_INIT;
 
-    lzma_options_lzma lzma_opts;
-    if (lzma_lzma_preset(&lzma_opts, 9) != LZMA_OK) {
-        fatal("lzma_lzma_preset failed\n");
-    }
-
     // Multithreaded encoder with kernel-standard configuration
     if (lzma_stream_encoder_mt(&strm, &(lzma_mt){
+        .preset = 9,
         .threads = sysconf(_SC_NPROCESSORS_ONLN) > 0 ? (uint32_t)sysconf(_SC_NPROCESSORS_ONLN) : 1,
-        .filters = (lzma_filter[]){
-            {LZMA_FILTER_LZMA2, &lzma_opts},
-            {LZMA_VLI_UNKNOWN, NULL}
-        },
         .check = LZMA_CHECK_CRC32
     }) != LZMA_OK) {
         fatal("lzma_stream_encoder_mt failed\n");
