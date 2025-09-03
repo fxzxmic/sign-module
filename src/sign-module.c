@@ -36,18 +36,11 @@
 
 #include <lzma.h>
 
-/* Module trailer as kernel expects */
-struct module_signature {
-    uint8_t  algo;
-    uint8_t  hash;
-    uint8_t  id_type;
-    uint8_t  signer_len;
-    uint8_t  key_id_len;
-    uint8_t  __pad[3];
-    uint32_t sig_len; /* network order */
-};
+#include "linux/module_signature.h"
+
 #define PKEY_ID_PKCS7 2
-static const char magic_number[] = "~Module signature appended~\n";
+
+static const char magic_number[] = MODULE_SIG_STRING;
 
 /* helpers */
 static void fatal(const char *fmt, ...) __attribute__((noreturn, format(printf, 1, 2)));
